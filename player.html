@@ -306,7 +306,7 @@
     document.getElementById('guide').style.display = 'block';
   } else {
     // Google Drive 直接串流網址
-    audio.src = `https://drive.google.com/uc?export=open&id=${fileId}`;
+    audio.src = `https://docs.google.com/uc?export=download&id=${fileId}`;
     audio.loop = true;
     document.getElementById('player').style.display = 'flex';
 
