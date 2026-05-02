@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>蝴蝶合唱團 練唱播放器</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600&family=Cinzel:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0d1117;
+      --surface:   #161b22;
+      --border:    #30363d;
+      --accent:    #c9a84c;
+      --accent2:   #e8c97a;
+      --text:      #e6edf3;
+      --muted:     #8b949e;
+      --radius:    14px;
+    }
+
+    body {
+      min-height: 100vh;
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Noto Serif TC', serif;
+      color: var(--text);
+      overflow: hidden;
+    }
+
+    /* 背景光暈 */
+    body::before {
+      content: '';
+      position: fixed;
+      width: 600px; height: 600px;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      background: radial-gradient(ellipse, rgba(201,168,76,0.08) 0%, transparent 70%);
+      pointer-events: none;
+      animation: pulse 4s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.6; transform: translate(-50%,-50%) scale(1); }
+      50%       { opacity: 1;   transform: translate(-50%,-50%) scale(1.08); }
+    }
+
+    .card {
+      position: relative;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 40px 44px 36px;
+      width: min(440px, 92vw);
+      box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+      animation: slideUp 0.5s cubic-bezier(.22,.68,0,1.2) both;
+    }
+    @keyframes slideUp {
+      from { opacity:0; transform: translateY(24px); }
+      to   { opacity:1; transform: translateY(0); }
+    }
+
+    /* 裝飾線 */
+    .deco {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 22px;
+    }
+    .deco-line {
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(to right, transparent, var(--accent), transparent);
+      opacity: 0.5;
+    }
+    .deco-diamond {
+      width: 6px; height: 6px;
+      background: var(--accent);
+      transform: rotate(45deg);
+      opacity: 0.8;
+    }
+
+    .choir-name {
+      font-family: 'Cinzel', serif;
+      font-size: 11px;
+      letter-spacing: 3px;
+      color: var(--accent);
+      text-align: center;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      opacity: 0.85;
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 600;
+      text-align: center;
+      color: var(--text);
+      line-height: 1.4;
+      margin-bottom: 32px;
+      min-height: 1.4em;
+    }
+
+    /* 自訂播放器 */
+    .player {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* 播放 / 暫停按鈕 */
+    .play-btn {
+      width: 64px; height: 64px;
+      border-radius: 50%;
+      border: 2px solid var(--accent);
+      background: transparent;
+      color: var(--accent);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 4px;
+      transition: background .2s, color .2s, transform .15s;
+      position: relative;
+    }
+    .play-btn:hover { background: var(--accent); color: var(--bg); transform: scale(1.06); }
+    .play-btn svg { width: 26px; height: 26px; }
+
+    /* 旋轉動畫圓環 */
+    .play-btn::before {
+      content: '';
+      position: absolute;
+      inset: -5px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      border-top-color: var(--accent2);
+      opacity: 0;
+      transition: opacity .3s;
+    }
+    .playing .play-btn::before {
+      opacity: 0.6;
+      animation: spin 2s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* 進度條 */
+    .progress-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      color: var(--muted);
+      font-family: 'Cinzel', monospace;
+      letter-spacing: 1px;
+    }
+    input[type=range] {
+      flex: 1;
+      -webkit-appearance: none;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--border);
+      outline: none;
+      cursor: pointer;
+      accent-color: var(--accent);
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 13px; height: 13px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      transition: transform .15s;
+    }
+    input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.3); }
+
+    /* 音量列 */
+    .volume-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+    }
+    .vol-icon { flex-shrink: 0; }
+    input[type=range].vol { width: 90px; }
+
+    /* 循環開關 */
+    .loop-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+      user-select: none;
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      transition: border-color .2s, background .2s;
+      font-size: 13px;
+      color: var(--muted);
+      width: fit-content;
+      margin: 0 auto;
+    }
+    .loop-wrap.on {
+      border-color: var(--accent);
+      background: rgba(201,168,76,0.08);
+      color: var(--accent);
+    }
+    .loop-wrap svg { width: 16px; height: 16px; }
+
+    /* 錯誤訊息 */
+    .error {
+      display: none;
+      text-align: center;
+      color: #f85149;
+      font-size: 13px;
+      margin-top: 8px;
+      line-height: 1.6;
+    }
+
+    /* 使用說明（網址參數未帶時顯示） */
+    .guide {
+      display: none;
+      background: rgba(201,168,76,0.06);
+      border: 1px solid rgba(201,168,76,0.2);
+      border-radius: 10px;
+      padding: 20px 22px;
+      font-size: 13px;
+      line-height: 1.9;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    .guide code {
+      background: rgba(255,255,255,0.06);
+      border-radius: 4px;
+      padding: 1px 6px;
+      color: var(--accent2);
+      font-size: 12px;
+      word-break: break-all;
+    }
+    .guide strong { color: var(--text); }
+  </style>
+</head>
+<body>
+<div class="card" id="card">
+  <div class="deco">
+    <div class="deco-line"></div>
+    <div class="deco-diamond"></div>
+    <div class="deco-line"></div>
+  </div>
+  <div class="choir-name">台東蝴蝶合唱團</div>
+  <h1 id="title">載入中…</h1>
+
+  <div class="player" id="player" style="display:none">
+    <div class="play-btn" id="playBtn" onclick="togglePlay()">
+      <svg id="iconPlay" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+      <svg id="iconPause" viewBox="0 0 24 24" fill="currentColor" style="display:none"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+    </div>
+
+    <div class="progress-wrap">
+      <span id="cur">0:00</span>
+      <input type="range" id="seek" value="0" min="0" step="0.1" oninput="onSeek()">
+      <span id="dur">0:00</span>
+    </div>
+
+    <div class="volume-wrap">
+      <svg class="vol-icon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+        <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 7.97v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>
+      </svg>
+      <input type="range" class="vol" id="vol" min="0" max="1" step="0.05" value="1" oninput="setVol()">
+    </div>
+
+    <div class="loop-wrap on" id="loopBtn" onclick="toggleLoop()">
+      <svg viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
+      </svg>
+      <span id="loopLabel">循環播放：開</span>
+    </div>
+  </div>
+
+  <div class="error" id="error">
+    ⚠️ 無法載入音檔，請確認 Google Drive 檔案已公開分享。
+  </div>
+
+  <div class="guide" id="guide">
+    <strong>📌 使用方式（給管理者）</strong><br><br>
+    將此頁面網址加上以下參數：<br><br>
+    <code>player.html?id=【檔案ID】&amp;title=【曲目名稱】</code><br><br>
+    <strong>範例：</strong><br>
+    <code>player.html?id=1aBcDeFgHiJk&amp;title=天使Soprano</code><br><br>
+    檔案 ID 為 Google Drive 分享連結中 <code>/d/</code> 之後、<code>/view</code> 之前的字串。
+  </div>
+</div>
+
+<audio id="audio"></audio>
+
+<script>
+  const params = new URLSearchParams(location.search);
+  const fileId = params.get('id');
+  const title  = params.get('title') || '練唱音檔';
+  const audio  = document.getElementById('audio');
+  const card   = document.getElementById('card');
+
+  document.getElementById('title').textContent = title;
+
+  if (!fileId) {
+    document.getElementById('title').textContent = '蝴蝶合唱團 練唱播放器';
+    document.getElementById('guide').style.display = 'block';
+  } else {
+    // Google Drive 直接串流網址
+    audio.src = `https://drive.google.com/uc?export=open&id=${fileId}`;
+    audio.loop = true;
+    document.getElementById('player').style.display = 'flex';
+
+    audio.addEventListener('loadedmetadata', () => {
+      document.getElementById('seek').max = audio.duration;
+      document.getElementById('dur').textContent = fmt(audio.duration);
+    });
+    audio.addEventListener('timeupdate', () => {
+      document.getElementById('cur').textContent = fmt(audio.currentTime);
+      document.getElementById('seek').value = audio.currentTime;
+    });
+    audio.addEventListener('error', () => {
+      document.getElementById('player').style.display = 'none';
+      document.getElementById('error').style.display = 'block';
+    });
+    audio.addEventListener('play',  () => { card.classList.add('playing');    updateIcon(true);  });
+    audio.addEventListener('pause', () => { card.classList.remove('playing'); updateIcon(false); });
+  }
+
+  function togglePlay() {
+    audio.paused ? audio.play() : audio.pause();
+  }
+  function onSeek() {
+    audio.currentTime = document.getElementById('seek').value;
+  }
+  function setVol() {
+    audio.volume = document.getElementById('vol').value;
+  }
+  function toggleLoop() {
+    audio.loop = !audio.loop;
+    const btn = document.getElementById('loopBtn');
+    btn.classList.toggle('on', audio.loop);
+    document.getElementById('loopLabel').textContent = `循環播放：${audio.loop ? '開' : '關'}`;
+  }
+  function updateIcon(playing) {
+    document.getElementById('iconPlay').style.display  = playing ? 'none' : '';
+    document.getElementById('iconPause').style.display = playing ? '' : 'none';
+  }
+  function fmt(s) {
+    if (!isFinite(s)) return '0:00';
+    const m = Math.floor(s / 60);
+    const sec = String(Math.floor(s % 60)).padStart(2, '0');
+    return `${m}:${sec}`;
+  }
+</script>
+</body>
+</html>
