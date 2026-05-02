@@ -283,10 +283,10 @@
   <div class="guide" id="guide">
     <strong>📌 使用方式（給管理者）</strong><br><br>
     將此頁面網址加上以下參數：<br><br>
-    <code>player.html?id=【檔案ID】&amp;title=【曲目名稱】</code><br><br>
+    <code>player.html?src=【音檔路徑】&amp;title=【曲目名稱】</code><br><br>
     <strong>範例：</strong><br>
-    <code>player.html?id=1aBcDeFgHiJk&amp;title=天使Soprano</code><br><br>
-    檔案 ID 為 Google Drive 分享連結中 <code>/d/</code> 之後、<code>/view</code> 之前的字串。
+    <code>player.html?src=audio/tianshi/soprano.aac&amp;title=天使Soprano</code><br><br>
+    音檔路徑為相對於 player.html 的路徑，建議依曲目建立子資料夾存放。
   </div>
 </div>
 
@@ -294,19 +294,20 @@
 
 <script>
   const params = new URLSearchParams(location.search);
-  const fileId = params.get('id');
   const title  = params.get('title') || '練唱音檔';
   const audio  = document.getElementById('audio');
   const card   = document.getElementById('card');
 
   document.getElementById('title').textContent = title;
 
-  if (!fileId) {
+  const srcFile = params.get('src');
+
+  if (!srcFile) {
     document.getElementById('title').textContent = '蝴蝶合唱團 練唱播放器';
     document.getElementById('guide').style.display = 'block';
   } else {
-    // Google Drive 直接串流網址
-    audio.src = `https://docs.google.com/uc?export=download&id=${fileId}`;
+    // 相對路徑音檔（GitHub Pages 同網域）
+    audio.src = srcFile;
     audio.loop = true;
     document.getElementById('player').style.display = 'flex';
 
